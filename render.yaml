@@ -47,7 +47,7 @@ services:
     runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
-    staticPublishPath: frontend/build
+    staticPublishPath: build
     autoDeployTrigger: commit
     routes:
       - type: rewrite
@@ -62,7 +62,7 @@ services:
     runtime: static
     rootDir: super-admin-dashboard
     buildCommand: npm ci && npm run build
-    staticPublishPath: super-admin-dashboard/dist
+    staticPublishPath: dist
     autoDeployTrigger: commit
     routes:
       - type: rewrite
