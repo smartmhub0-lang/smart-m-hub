@@ -3,7 +3,7 @@
 // leave the entire frontend blank before React mounts.
 const backendOrigin = String(
   process.env.REACT_APP_BACKEND_URL ||
-  (process.env.NODE_ENV === "production" ? "https://smart-m-hub-original.onrender.com" : "http://127.0.0.1:8000")
+  (process.env.NODE_ENV === "production" ? "https://smart-m-hub.onrender.com" : "http://127.0.0.1:8000")
 ).replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 export const resolveMediaUrl = (value) => {
