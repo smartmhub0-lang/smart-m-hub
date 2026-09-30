@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from config import load_secret_file_env, validate_environment
+from config import load_secret_file_env, normalize_mongo_url, validate_environment
 
 
 ROOT_DIR = Path(__file__).parent
@@ -20,6 +20,8 @@ if not MONGO_URL:
     if APP_ENV in {"production", "prod"}:
         raise RuntimeError("MONGO_URL must be set in production")
     MONGO_URL = "mongodb://localhost:27017"
+else:
+    MONGO_URL = normalize_mongo_url(MONGO_URL)
 
 DB_NAME = str(os.getenv("DB_NAME", "smart_m_hub") or "").strip()
 if not DB_NAME:

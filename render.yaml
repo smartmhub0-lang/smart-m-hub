@@ -12,8 +12,11 @@ services:
       - key: APP_ENV
         value: production
       - key: MONGO_URL
+        # Set the full Atlas URI in Render. Credentials must be URI-encoded and
+        # Atlas database users normally require authSource=admin.
         sync: false
       - key: DB_NAME
+        # Set the application database separately; do not rely on a URI path.
         sync: false
       - key: SECRET_KEY
         sync: false

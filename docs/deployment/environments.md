@@ -11,8 +11,8 @@
 ## Required Production Variables
 
 - `APP_ENV=production`
-- `MONGO_URL`
-- `DB_NAME`
+- `MONGO_URL` — the Atlas URI, for example `mongodb+srv://URL_ENCODED_USERNAME:URL_ENCODED_PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority&authSource=admin`. The username and password must be URI-encoded; Atlas database users authenticate against `admin`.
+- `DB_NAME` — the application database name, for example `smart_m_hub_beta`. Do not use the URI path to select it.
 - `SECRET_KEY`
 - `ALLOWED_ORIGINS` or `ALLOWED_ORIGIN_REGEX`
 - `FRONTEND_URL`

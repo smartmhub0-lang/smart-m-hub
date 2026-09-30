@@ -1,6 +1,6 @@
 import pytest
 
-from config import ConfigurationError, load_secret_file_env, validate_environment
+from config import ConfigurationError, load_secret_file_env, normalize_mongo_url, validate_environment
 
 
 def test_development_environment_allows_local_defaults(monkeypatch):
@@ -38,3 +38,20 @@ def test_secret_file_env_loads_value(monkeypatch):
     finally:
         if secret_file.exists():
             secret_file.unlink()
+
+
+def test_normalize_mongo_url_encodes_atlas_credentials_and_sets_auth_source():
+    uri = "mongodb+srv://user:p@ss/word@cluster.mongodb.net/smart_m_hub?retryWrites=true"
+
+    normalized = normalize_mongo_url(uri)
+
+    assert normalized == (
+        "mongodb+srv://user:p%40ss%2Fword@cluster.mongodb.net/"
+        "?retryWrites=true&authSource=admin"
+    )
+
+
+def test_normalize_mongo_url_leaves_non_atlas_urls_unchanged():
+    uri = "mongodb://localhost:27017"
+
+    assert normalize_mongo_url(uri) == uri

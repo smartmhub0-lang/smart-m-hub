@@ -15,7 +15,8 @@ Backend:
 
 ```env
 APP_ENV=production
-MONGO_URL=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/smart_m_hub
+# Use the Atlas connect-string host. URL-encode username and password values.
+MONGO_URL=mongodb+srv://URL_ENCODED_USERNAME:URL_ENCODED_PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority&authSource=admin
 DB_NAME=smart_m_hub_beta
 SECRET_KEY=replace-with-a-long-random-secret
 ALLOWED_ORIGINS=https://school.example.com,https://admin.example.com
@@ -123,7 +124,7 @@ Then restart the frontend process so React picks up the environment variable.
 
 - `APP_ENV=production` is set on the backend.
 - `SECRET_KEY` is set and not committed.
-- `MONGO_URL` points to the beta database, not a local or production database.
+- `MONGO_URL` is the Atlas connection URI with `authSource=admin`; `DB_NAME` selects the beta database used by the application.
 - `ALLOWED_ORIGINS` includes only deployed frontend domains.
 - Frontend env variables point to the deployed backend URL.
 - Demo/test credentials are not committed.

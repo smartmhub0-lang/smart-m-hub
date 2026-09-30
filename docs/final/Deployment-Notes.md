@@ -12,8 +12,8 @@
 ## Required Production Configuration
 
 - `APP_ENV=production`
-- `MONGO_URL`
-- `DB_NAME`
+- `MONGO_URL` — an Atlas URI using URI-encoded credentials and `authSource=admin`, such as `mongodb+srv://URL_ENCODED_USERNAME:URL_ENCODED_PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority&authSource=admin`.
+- `DB_NAME` — the application database name, such as `smart_m_hub_beta`.
 - `SECRET_KEY`
 - `ALLOWED_ORIGINS` or `ALLOWED_ORIGIN_REGEX`
 - `FRONTEND_URL`
