@@ -13,6 +13,7 @@ from email.message import EmailMessage
 from typing import Any, Iterable, Optional
 
 import httpx
+from pymongo.errors import DuplicateKeyError
 from services.job_queue import enqueue_job
 
 
@@ -79,6 +80,11 @@ class SmtpEmailProvider(EmailProvider):
             raise NotificationProviderError("SMTP_HOST and EMAIL_FROM are required")
         port = int(os.getenv("SMTP_PORT", "587"))
         use_tls = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes"}
+        use_ssl = os.getenv("SMTP_USE_SSL", "false").lower() in {"1", "true", "yes"}
+        if use_tls and use_ssl:
+            raise NotificationProviderError("SMTP_USE_TLS and SMTP_USE_SSL cannot both be enabled")
+        if username and not password:
+            raise NotificationProviderError("SMTP_PASSWORD is required when SMTP_USERNAME is configured")
 
         def deliver() -> None:
             message = EmailMessage()
@@ -86,7 +92,8 @@ class SmtpEmailProvider(EmailProvider):
             message["To"] = to
             message["Subject"] = subject
             message.set_content(text)
-            with smtplib.SMTP(host, port, timeout=20) as client:
+            smtp_client = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+            with smtp_client(host, port, timeout=20) as client:
                 if use_tls:
                     client.starttls(context=ssl.create_default_context())
                 if username:
@@ -165,6 +172,72 @@ def get_sms_provider() -> SmsProvider:
     if provider == "generic":
         return GenericSmsProvider()
     return DisabledSmsProvider()
+
+
+def super_admin_welcome_message() -> str:
+    return (
+        "Welcome to Smart M Hub Super Admin.\n\n"
+        "You have been configured as the owner and Super Admin for Smart M Hub. "
+        "Your account can manage platform-level operations, schools, and system settings.\n\n"
+        "For security, keep your account credentials private and use the official Smart M Hub sign-in page.\n\n"
+        "Regards,\nSmart M Hub"
+    )
+
+
+async def send_super_admin_welcome_email(db: Any, *, email: str) -> dict:
+    """Send the configured owner welcome email once after provider acceptance.
+
+    The durable event record prevents a service restart from resending an
+    accepted message. Delivery is explicitly opt-in through an environment
+    variable so configuring a provider alone does not send mail.
+    """
+    if os.getenv("SUPER_ADMIN_WELCOME_EMAIL_ENABLED", "false").lower() not in {"1", "true", "yes"}:
+        return {"status": "disabled"}
+
+    destination = normalize_email(email)
+    if not destination:
+        logger.warning("super_admin_welcome_email_skipped reason=invalid_recipient")
+        return {"status": "invalid_recipient"}
+
+    event_key = f"super_admin_welcome:{destination}"
+    events = db.system_email_events
+    existing = await events.find_one({"event_key": event_key})
+    if existing:
+        return {"status": "already_sent" if existing.get("status") == "sent" else "already_recorded"}
+
+    now = now_utc()
+    try:
+        await events.insert_one({
+            "event_key": event_key,
+            "event_type": "super_admin_welcome",
+            "destination": destination,
+            "status": "sending",
+            "created_at": now,
+            "updated_at": now,
+        })
+    except DuplicateKeyError:
+        return {"status": "already_recorded"}
+
+    try:
+        provider_reference = await get_email_provider().send(
+            to=destination,
+            subject="Welcome to Smart M Hub Super Admin",
+            text=super_admin_welcome_message(),
+        )
+    except Exception as exc:
+        await events.update_one(
+            {"event_key": event_key},
+            {"$set": {"status": "failed", "error_type": type(exc).__name__, "updated_at": now_utc()}},
+        )
+        logger.warning("super_admin_welcome_email_failed reason=%s", type(exc).__name__)
+        return {"status": "failed"}
+
+    await events.update_one(
+        {"event_key": event_key},
+        {"$set": {"status": "sent", "provider_reference": provider_reference, "sent_at": now_utc(), "updated_at": now_utc()}},
+    )
+    logger.info("super_admin_welcome_email_accepted")
+    return {"status": "sent", "provider_reference": provider_reference}
 
 
 async def dispatch_notifications(

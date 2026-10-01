@@ -100,6 +100,7 @@ from services.job_queue import enqueue_job
 from services.notifications import queue_notification_batch
 from services.external_notifications import (
     dispatch_notifications,
+    send_super_admin_welcome_email,
     resolve_announcement_recipients,
     resolve_student_guardians,
     student_guardian_recipients,
@@ -9875,6 +9876,7 @@ async def ensure_database_indexes():
         (db.jobs, [("id", 1)], {"unique": True, "name": "jobs_id_idx"}),
         (db.jobs, [("school_id", 1), ("job_type", 1), ("status", 1), ("created_at", -1)], {"name": "jobs_school_type_status_created_idx"}),
         (db.notification_deliveries, [("school_id", 1), ("status", 1), ("created_at", -1)], {"name": "notification_deliveries_school_status_created_idx"}),
+        (db.system_email_events, [("event_key", 1)], {"unique": True, "name": "system_email_events_event_key_idx"}),
         (db.audit_logs, [("school_id", 1), ("category", 1), ("severity", 1), ("timestamp", -1)], {"name": "audit_logs_taxonomy_idx"}),
         (db.audit_logs, [("action", 1), ("timestamp", -1)], {"name": "audit_logs_action_timestamp_idx"}),
         (db.frontend_error_events, [("portal", 1), ("route", 1), ("created_at", -1)], {"name": "frontend_error_events_portal_route_created_idx"}),
@@ -9927,6 +9929,7 @@ async def startup_tasks():
     if not reconciled or not hash_matches:
         raise RuntimeError("Super Admin reconciliation verification failed")
     await ensure_database_indexes()
+    await send_super_admin_welcome_email(db, email=os.getenv("SUPER_ADMIN_EMAIL", ""))
 
 
 DOMAIN_ROUTE_COUNTS = {
