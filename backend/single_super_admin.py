@@ -65,15 +65,28 @@ async def reconcile_single_super_admin(db, hash_password: Callable[[str], str]) 
         "deactivation_reason": "Only the configured Smart M Hub developer account is permitted",
         "updated_at": now,
     }
+    matches = await db.users.find({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}).to_list(length=100)
+    # Prefer the configured address, but preserve the existing singleton when
+    # an operator changes that address through the environment. This rotates
+    # the credential on the same account instead of disabling it and creating
+    # a second account.
+    canonical = matches[0] if matches else await db.users.find_one({"super_admin_guard": "singleton"})
+
+    cleanup_conditions = [elevated_query]
+    if canonical and canonical.get("_id") is not None:
+        cleanup_conditions.append({"_id": {"$ne": canonical["_id"]}})
     await db.users.update_many(
-        {"$and": [elevated_query, {"email": {"$not": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}}]},
+        {"$and": cleanup_conditions},
         {"$set": disable_fields, "$unset": {"super_admin_guard": ""}},
     )
 
-    matches = await db.users.find({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}).to_list(length=100)
-    canonical = matches[0] if matches else None
     if len(matches) > 1:
-        duplicate_ids = [item["_id"] for item in matches[1:] if item.get("_id") is not None]
+        canonical_id = canonical.get("_id") if canonical else None
+        duplicate_ids = [
+            item["_id"]
+            for item in matches
+            if item.get("_id") is not None and item.get("_id") != canonical_id
+        ]
         if duplicate_ids:
             await db.users.update_many(
                 {"_id": {"$in": duplicate_ids}},

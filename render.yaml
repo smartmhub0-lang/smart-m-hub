@@ -21,7 +21,7 @@ services:
       - key: SECRET_KEY
         sync: false
       - key: SUPER_ADMIN_EMAIL
-        sync: false
+        value: chrisadundi1@gmail.com
       - key: SUPER_ADMIN_PASSWORD
         sync: false
       - key: FRONTEND_URL

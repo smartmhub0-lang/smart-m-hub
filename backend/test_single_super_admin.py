@@ -54,6 +54,7 @@ def test_reconcile_creates_one_hashed_active_super_admin():
     users = MagicMock()
     users.update_many = AsyncMock()
     users.find.return_value.to_list = AsyncMock(return_value=[])
+    users.find_one = AsyncMock(return_value=None)
     users.insert_one = AsyncMock()
     users.create_index = AsyncMock()
     database = MagicMock(users=users)
@@ -83,6 +84,7 @@ def test_exact_deployed_super_admin_credentials_authenticate_after_reconciliatio
     users.name = "users"
     users.update_many = AsyncMock()
     users.find.return_value.to_list = AsyncMock(return_value=[])
+    users.find_one = AsyncMock(return_value=None)
     users.insert_one = AsyncMock()
     users.create_index = AsyncMock()
     database = MagicMock(users=users)
@@ -105,3 +107,41 @@ def test_exact_deployed_super_admin_credentials_authenticate_after_reconciliatio
     assert inserted["is_blocked"] is False
     assert inserted["school_id"] is None
     assert DEPLOYED_SUPER_ADMIN_PASSWORD not in str(inserted)
+
+
+def test_reconcile_updates_existing_singleton_when_configured_email_changes():
+    import asyncio
+
+    users = MagicMock()
+    users.name = "users"
+    users.update_many = AsyncMock()
+    users.find.return_value.to_list = AsyncMock(return_value=[])
+    users.find_one = AsyncMock(return_value={
+        "_id": "existing-super-admin",
+        "id": "existing-super-admin-id",
+        "email": "previous-admin@example.test",
+        "role": "super_admin",
+        "super_admin_guard": "singleton",
+        "password_hash": "$2b$12$previous-hash",
+    })
+    users.update_one = AsyncMock()
+    users.insert_one = AsyncMock()
+    users.create_index = AsyncMock()
+    database = MagicMock(users=users)
+    database.name = "smart_m_hub_beta"
+    configured_password = "RotatedPassword123!"
+
+    with patch.dict(os.environ, {
+        "SUPER_ADMIN_EMAIL": "new-admin@example.test",
+        "SUPER_ADMIN_PASSWORD": configured_password,
+    }):
+        result = asyncio.run(reconcile_single_super_admin(database, hash_password))
+
+    assert result == {"id": "existing-super-admin-id", "email": "new-admin@example.test", "action": "updated"}
+    users.insert_one.assert_not_awaited()
+    users.update_one.assert_awaited_once()
+    update = users.update_one.await_args.args[1]
+    assert update["$set"]["email"] == "new-admin@example.test"
+    assert update["$set"]["password_hash"] != configured_password
+    assert verify_password(configured_password, update["$set"]["password_hash"])
+    assert users.update_many.await_args.args[0]["$and"][1] == {"_id": {"$ne": "existing-super-admin"}}
