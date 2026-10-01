@@ -110,7 +110,7 @@ const RegisterPage = () => {
         schoolCode: data.school_code || "",
         approvalStatus: data.approval_status || "pending",
         paymentStatus: data.payment_status || "pending",
-        installationFee: data.installation_invoice?.amount || 5000,
+        activationFee: data.activation_invoice?.amount || 1000,
       });
       setFormData(initialForm);
       toast.success("School registration submitted successfully");
@@ -168,7 +168,7 @@ const RegisterPage = () => {
                 School registration submitted successfully.
               </CardTitle>
               <CardDescription className="text-slate-400">
-                Complete the installation payment step so support can verify and approve your school.
+                Complete the activation payment step so support can verify and approve your school.
               </CardDescription>
             </CardHeader>
 
@@ -184,12 +184,12 @@ const RegisterPage = () => {
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#070B14] p-5">
-                <h2 className="text-xl font-semibold text-white">Installation Payment</h2>
+                <h2 className="text-xl font-semibold text-white">Activation Payment</h2>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg border border-white/10 bg-[#101827] p-4">
-                    <p className="text-sm text-slate-400">Installation fee</p>
+                    <p className="text-sm text-slate-400">Activation fee</p>
                     <p className="mt-1 text-2xl font-bold text-white">
-                      KES {Number(registrationSummary.installationFee || 5000).toLocaleString()}
+                      KES {Number(registrationSummary.activationFee || 1000).toLocaleString()}
                     </p>
                     <p className="mt-2 text-sm text-slate-300">One-time charge during school registration.</p>
                   </div>
@@ -259,7 +259,7 @@ const RegisterPage = () => {
               School Registration
             </CardTitle>
             <CardDescription className="text-slate-400">
-              Submit your school details. Support will review and approve access after installation payment.
+              Submit your school details. Support will review and approve access after activation payment.
             </CardDescription>
           </CardHeader>
 

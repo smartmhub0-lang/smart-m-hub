@@ -264,6 +264,88 @@ async def send_super_admin_welcome_email(db: Any, *, email: str) -> dict:
     return {"status": "sent", "provider_reference": provider_reference}
 
 
+def registration_confirmation_message(*, full_name: str, email: str, role: str, school_name: str, school_code: str) -> str:
+    return (
+        f"Hello {full_name},\n\n"
+        "Your Smart M Hub account was successfully registered under the following school:\n\n"
+        f"Name: {full_name}\n"
+        f"Registered email: {email}\n"
+        f"Registered role: {role}\n"
+        f"School: {school_name}\n"
+        f"School code: {school_code}\n\n"
+        "You can use this school code when signing in or joining the school.\n\n"
+        "Regards,\nSmart M Hub"
+    )
+
+
+async def send_registration_confirmation_email(db: Any, *, user: dict, school: dict) -> dict:
+    """Send a tenant-specific registration confirmation at most once per tenant/email.
+
+    ``school`` must be the authoritative record resolved by the registration route.
+    This is best-effort so delivery or event-log errors cannot undo registration.
+    """
+    try:
+        destination = normalize_email(user.get("email"))
+        school_id = str(school.get("id") or school.get("_id") or "").strip()
+        full_name = str(user.get("full_name") or "").strip()
+        role = str(user.get("role") or "").strip()
+        school_name = str(school.get("name") or "").strip()
+        school_code = str(school.get("school_code") or "").strip()
+        if not all((destination, school_id, full_name, role, school_name, school_code)):
+            logger.warning("registration_confirmation_skipped reason=missing_registration_identity")
+            return {"status": "skipped"}
+
+        event_key = f"registration_confirmation:{school_id}:{destination}"
+        events = db.system_email_events
+        existing = await events.find_one({"event_key": event_key})
+        if existing:
+            return {"status": "already_sent" if existing.get("status") == "sent" else "already_recorded"}
+
+        now = now_utc()
+        try:
+            await events.insert_one({
+                "event_key": event_key,
+                "event_type": "registration_confirmation",
+                "school_id": school_id,
+                "destination": destination,
+                "status": "sending",
+                "created_at": now,
+                "updated_at": now,
+            })
+        except DuplicateKeyError:
+            return {"status": "already_recorded"}
+
+        try:
+            provider_reference = await get_email_provider().send(
+                to=destination,
+                subject=f"Your Smart M Hub account at {school_name} is registered",
+                text=registration_confirmation_message(
+                    full_name=full_name,
+                    email=destination,
+                    role=role,
+                    school_name=school_name,
+                    school_code=school_code,
+                ),
+            )
+        except Exception as exc:
+            await events.update_one(
+                {"event_key": event_key},
+                {"$set": {"status": "failed", "error_type": type(exc).__name__, "updated_at": now_utc()}},
+            )
+            logger.warning("registration_confirmation_failed reason=%s", type(exc).__name__)
+            return {"status": "failed"}
+
+        await events.update_one(
+            {"event_key": event_key},
+            {"$set": {"status": "sent", "provider_reference": provider_reference, "sent_at": now_utc(), "updated_at": now_utc()}},
+        )
+        logger.info("registration_confirmation_accepted school_id=%s", school_id)
+        return {"status": "sent", "provider_reference": provider_reference}
+    except Exception as exc:
+        logger.warning("registration_confirmation_failed reason=%s", type(exc).__name__)
+        return {"status": "failed"}
+
+
 async def dispatch_notifications(
     db: Any,
     *,

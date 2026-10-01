@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pricing import ACTIVATION_FEE_KES
 import os
 import secrets
 import string
@@ -91,14 +92,14 @@ for u in users:
     print(f"{u['role']} demo user: {u['email']} / {u['password']}")
 
 db.platform_invoices.update_one(
-    {"school_id": demo_school_id, "invoice_type": "installation"},
+    {"school_id": demo_school_id, "invoice_type": {"$in": ["activation", "installation"]}},
     {
         "$set": {
             "school_id": demo_school_id,
             "school_name": "Demo School",
-            "invoice_type": "installation",
+            "invoice_type": "activation",
             "invoice_number": f"INV-{demo_school_code}-DEMO",
-            "amount": 5000,
+            "amount": ACTIVATION_FEE_KES,
             "currency": "KES",
             "status": "paid",
             "paid_at": now,

@@ -81,7 +81,7 @@ export default function Approvals() {
       <div style={headerStyle}>
         <div>
           <h1 style={titleStyle}>Approvals</h1>
-          <p style={mutedStyle}>Review school registrations, installation payment state and account access before activation.</p>
+          <p style={mutedStyle}>Review school registrations, activation payment state and account access before activation.</p>
         </div>
         <button style={secondaryButtonStyle} onClick={load} disabled={loading}>Refresh</button>
       </div>

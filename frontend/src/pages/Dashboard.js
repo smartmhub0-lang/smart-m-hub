@@ -738,7 +738,7 @@ const isStudent =
           <CardContent className="p-5">
             <h3 className="font-semibold text-white">Smart M Hub School Charges</h3>
             <p className="mt-2 text-sm text-slate-200">
-              KES 5,000 is a one-time charge during school registration. Thereafter, KES 2,000 is charged monthly from the school's registration date.
+              KES 1,000 is a one-time activation fee during school registration. Thereafter, KES 2,000 is charged monthly from the school's registration date.
             </p>
           </CardContent>
         </Card>

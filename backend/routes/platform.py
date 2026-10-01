@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 
 from auth import get_current_user, db, hash_password, validate_password_strength
+from pricing import ACTIVATION_FEE_KES
 from services.external_notifications import (
     dispatch_notifications,
     normalize_email,
@@ -734,7 +735,7 @@ async def approve_school(school_id: str, user=Depends(require_super_admin)):
         {"$set": {"approval_status": "approved", "is_active": True, "is_suspended": False, "updated_at": now}}
     )
     await db.platform_invoices.update_many(
-        {"school_id": canonical_id, "invoice_type": "installation"},
+        {"school_id": canonical_id, "invoice_type": {"$in": ["activation", "installation"]}},
         {"$set": {"status": "paid", "paid_at": now, "updated_at": now}}
     )
     school_admins = await db.users.find(
@@ -873,7 +874,7 @@ async def payment_summary(user=Depends(require_super_admin)):
     payments = await db.payments.find({}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(500)
     invoices = await db.platform_invoices.find({}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(500)
     return {
-        "installation_fees": sum(money(i.get("amount")) for i in invoices if i.get("invoice_type") == "installation"),
+        "activation_fees": sum(money(i.get("amount")) for i in invoices if i.get("invoice_type") in {"activation", "installation"}),
         "monthly_subscriptions": sum(money(i.get("amount")) for i in invoices if i.get("invoice_type") == "subscription"),
         "pending_payments": sum(1 for i in invoices if i.get("status") == "pending"),
         "overdue_schools": await db.schools.count_documents({"subscription_status": "expired"}),
@@ -1039,8 +1040,11 @@ async def platform_control(user=Depends(require_super_admin)):
     settings = await db.platform_settings.find_one({}, {"_id": 0}) or {}
     return {
         "platform_settings": settings,
-        "subscription_plans": settings.get("subscription_plans", [{"name": "Standard", "monthly_amount": 2000, "installation_fee": 5000}]),
-        "pricing": {"installation_fee": 5000, "monthly_subscription": 2000},
+        "subscription_plans": [
+            {**{key: value for key, value in plan.items() if key != "installation_fee"}, "activation_fee": ACTIVATION_FEE_KES}
+            for plan in settings.get("subscription_plans", [{"name": "Standard", "monthly_amount": 2000}])
+        ],
+        "pricing": {"activation_fee": ACTIVATION_FEE_KES, "monthly_subscription": 2000},
         "global_announcements": await db.global_announcements.find({}, {"_id": 0}).sort("created_at", -1).to_list(100),
         "maintenance_mode": bool(settings.get("maintenance_mode", False)),
         "system_configuration": settings.get("system_configuration", {}),

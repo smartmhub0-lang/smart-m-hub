@@ -101,6 +101,7 @@ from services.notifications import queue_notification_batch
 from services.external_notifications import (
     dispatch_notifications,
     send_super_admin_welcome_email,
+    send_registration_confirmation_email,
     resolve_announcement_recipients,
     resolve_student_guardians,
     student_guardian_recipients,
@@ -110,6 +111,7 @@ from services.report_artifacts import create_report_artifact_manifest
 from services.storage import StorageError, store_upload
 from feature_flags import ASYNC_BULK_REPORTS, ASYNC_NOTIFICATIONS
 from config import load_secret_file_env, validate_environment
+from pricing import ACTIVATION_FEE_KES
 from database import client, db, DB_NAME
 from single_super_admin import is_canonical_super_admin, reconcile_single_super_admin
 from app.core.responses import api_success as shared_api_success
@@ -3750,7 +3752,7 @@ async def register_school(payload: RegisterSchoolRequest, request: Request):
             "subscription_status": "inactive",
             "subscription_amount": 2000,
             "billing_day": billing_day,
-            "installation_fee": 5000,
+            "activation_fee": ACTIVATION_FEE_KES,
             "payment_status": "pending",
             "payment_verification_status": "awaiting_payment_phone",
             "registration_payment_phone": None,
@@ -3809,12 +3811,12 @@ async def register_school(payload: RegisterSchoolRequest, request: Request):
             "id": str(uuid.uuid4()),
             "school_id": school_id,
             "school_name": payload.name,
-            "invoice_type": "installation",
+            "invoice_type": "activation",
             "invoice_number": f"INV-{school_code}-{now.strftime('%Y%m%d')}",
-            "amount": 5000,
+            "amount": ACTIVATION_FEE_KES,
             "currency": "KES",
             "status": "pending",
-            "description": "SMART M HUB installation fee",
+            "description": "SMART M HUB activation fee",
             "created_at": now,
             "updated_at": now
         }
@@ -3829,6 +3831,7 @@ async def register_school(payload: RegisterSchoolRequest, request: Request):
                 "approval_status": "pending",
             }
         )
+        await send_registration_confirmation_email(db, user=admin, school=school)
 
         # =========================
         # TOKEN (FIXED STRUCTURE)
@@ -3846,7 +3849,7 @@ async def register_school(payload: RegisterSchoolRequest, request: Request):
         # =========================
         return {
             "success": True,
-            "message": "School registered successfully. Installation payment and super admin approval are required before login.",
+            "message": "School registered successfully. Activation payment and super admin approval are required before login.",
 
             "school_id": school_id,
             "school_name": payload.name,
@@ -3865,7 +3868,7 @@ async def register_school(payload: RegisterSchoolRequest, request: Request):
 
             "approval_status": "pending",
             "payment_status": "pending",
-            "installation_invoice": serialize_doc(invoice),
+            "activation_invoice": serialize_doc(invoice),
             "generated_credentials": {
                 "username": payload.name,
                 "temporary_password": temporary_password,
@@ -3930,7 +3933,7 @@ async def submit_registration_payment_phone(payload: RegistrationPaymentPhoneReq
         }}
     )
     await db.platform_invoices.update_many(
-        {"school_id": school_id, "invoice_type": "installation"},
+        {"school_id": school_id, "invoice_type": {"$in": ["activation", "installation"]}},
         {"$set": {
             "payment_phone_number": payment_phone,
             "payment_verification_status": "pending_verification",
@@ -4042,6 +4045,7 @@ async def register_parent(request: ParentRegistrationRequest, http_request: Requ
         "updated_at": now,
     }
     await db.users.insert_one(user)
+    await send_registration_confirmation_email(db, user=user, school=school)
     await log_security_event(
         "parent_registration_completed",
         user,
@@ -4053,7 +4057,7 @@ async def register_parent(request: ParentRegistrationRequest, http_request: Requ
         title="Smart M Hub parent account created",
         message=f"Your parent or guardian account for {school.get('name') or 'the school'} was created successfully. You can now sign in.",
         recipients=[user],
-        channels=["email", "sms"],
+        channels=["sms"],
         event_type="parent_registration",
         requested_by=user.get("id"),
     )
@@ -4197,6 +4201,7 @@ async def join_school(payload: dict, http_request: Request):
         }
 
         await db.users.insert_one(user)
+        await send_registration_confirmation_email(db, user=user, school=school)
         await log_security_event(
             "join_school_requested",
             user,
