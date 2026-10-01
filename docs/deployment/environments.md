@@ -32,7 +32,7 @@ Use a managed secret store in production, such as cloud secret manager, Kubernet
 
 ## Transactional Email
 
-Set `EMAIL_PROVIDER=smtp` with `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, and optionally `SMTP_USERNAME` and `SMTP_PASSWORD`. Use `SMTP_USE_TLS=true` for STARTTLS (typically port 587), or `SMTP_USE_SSL=true` for implicit TLS (typically port 465), but never both. Alternatively set `EMAIL_PROVIDER=sendgrid` with `EMAIL_FROM` and `EMAIL_API_KEY` (and optionally `EMAIL_API_URL`).
+Set `EMAIL_PROVIDER=smtp` with `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, and optionally `SMTP_USERNAME` and `SMTP_PASSWORD`. Use `SMTP_USE_TLS=true` for STARTTLS (typically port 587), or `SMTP_USE_SSL=true` for implicit TLS (typically port 465), but never both. Alternatively set `EMAIL_PROVIDER=sendgrid` with `EMAIL_FROM` and `EMAIL_API_KEY` (and optionally `EMAIL_API_URL`), or `EMAIL_PROVIDER=resend` with `EMAIL_FROM` and `EMAIL_API_KEY`.
 
 After the provider is configured, set `SUPER_ADMIN_WELCOME_EMAIL_ENABLED=true` for one deployment to send the owner welcome email. The backend records provider acceptance in `system_email_events`, so later restarts do not resend it. Set the flag back to `false` after the test. Keep `SMTP_PASSWORD` and `EMAIL_API_KEY` only in the Render secret environment; never commit them.
 

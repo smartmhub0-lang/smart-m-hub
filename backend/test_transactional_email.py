@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 
 from services import external_notifications as notifications
 
@@ -36,6 +37,71 @@ class RecordingEmailProvider(notifications.EmailProvider):
 class FailingEmailProvider(notifications.EmailProvider):
     async def send(self, **_kwargs):
         raise notifications.NotificationProviderError("unavailable")
+
+
+class MockResponse:
+    def __init__(self, status_code=200, payload=None):
+        self.status_code = status_code
+        self._payload = payload or {}
+
+    def json(self):
+        return self._payload
+
+
+class MockAsyncClient:
+    calls = []
+    response = MockResponse(payload={"id": "resend-message-123"})
+
+    def __init__(self, **_kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return False
+
+    async def post(self, endpoint, *, headers, json):
+        self.calls.append((endpoint, headers, json))
+        return self.response
+
+
+def test_resend_provider_posts_transactional_email(monkeypatch):
+    MockAsyncClient.calls = []
+    MockAsyncClient.response = MockResponse(payload={"id": "resend-message-123"})
+    monkeypatch.setenv("EMAIL_API_KEY", "mock-secret-value")
+    monkeypatch.setenv("EMAIL_FROM", "Smart M Hub <mail@example.test>")
+    monkeypatch.setattr(notifications.httpx, "AsyncClient", MockAsyncClient)
+
+    result = asyncio.run(notifications.ResendEmailProvider().send(
+        to="owner@example.test", subject="Welcome", text="Welcome aboard"
+    ))
+
+    assert result == "resend-message-123"
+    endpoint, headers, payload = MockAsyncClient.calls[0]
+    assert endpoint == "https://api.resend.com/emails"
+    assert headers["Authorization"] == "Bearer mock-secret-value"
+    assert payload == {
+        "from": "Smart M Hub <mail@example.test>",
+        "to": ["owner@example.test"],
+        "subject": "Welcome",
+        "text": "Welcome aboard",
+    }
+
+
+def test_resend_provider_rejects_http_errors_without_exposing_response(monkeypatch):
+    MockAsyncClient.calls = []
+    MockAsyncClient.response = MockResponse(status_code=401, payload={"message": "invalid key"})
+    monkeypatch.setenv("EMAIL_API_KEY", "mock-secret-value")
+    monkeypatch.setenv("EMAIL_FROM", "mail@example.test")
+    monkeypatch.setattr(notifications.httpx, "AsyncClient", MockAsyncClient)
+
+    with pytest.raises(notifications.NotificationProviderError) as error:
+        asyncio.run(notifications.ResendEmailProvider().send(
+            to="owner@example.test", subject="Welcome", text="Welcome aboard"
+        ))
+    assert str(error.value) == "Email provider returned HTTP 401"
+    assert "mock-secret-value" not in str(error.value)
 
 
 def test_super_admin_welcome_email_is_disabled_by_default(monkeypatch):

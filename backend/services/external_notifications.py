@@ -124,6 +124,28 @@ class SendGridEmailProvider(EmailProvider):
         return response.headers.get("x-message-id", "accepted")
 
 
+class ResendEmailProvider(EmailProvider):
+    async def send(self, *, to: str, subject: str, text: str) -> str:
+        api_key = os.getenv("EMAIL_API_KEY", "").strip()
+        sender = os.getenv("EMAIL_FROM", "").strip()
+        if not api_key or not sender:
+            raise NotificationProviderError("EMAIL_API_KEY and EMAIL_FROM are required")
+        payload = {"from": sender, "to": [to], "subject": subject, "text": text}
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=payload,
+            )
+        if response.status_code >= 300:
+            raise NotificationProviderError(f"Email provider returned HTTP {response.status_code}")
+        try:
+            response_data = response.json()
+        except ValueError:
+            response_data = {}
+        return str(response_data.get("id") or "accepted")
+
+
 class AfricasTalkingSmsProvider(SmsProvider):
     async def send(self, *, to: str, text: str) -> str:
         api_key = os.getenv("SMS_API_KEY", "").strip()
@@ -162,6 +184,8 @@ def get_email_provider() -> EmailProvider:
         return SmtpEmailProvider()
     if provider == "sendgrid":
         return SendGridEmailProvider()
+    if provider == "resend":
+        return ResendEmailProvider()
     return DisabledEmailProvider()
 
 

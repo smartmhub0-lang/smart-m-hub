@@ -30,7 +30,7 @@ def notification_provider_status() -> dict:
     sms_provider = os.getenv("SMS_PROVIDER", "disabled").strip().lower()
     email_ready = bool(os.getenv("EMAIL_FROM")) and (
         (email_provider == "smtp" and bool(os.getenv("SMTP_HOST")))
-        or (email_provider == "sendgrid" and bool(os.getenv("EMAIL_API_KEY")))
+        or (email_provider in {"sendgrid", "resend"} and bool(os.getenv("EMAIL_API_KEY")))
     )
     sms_ready = (
         sms_provider in {"africastalking", "africas_talking"}
