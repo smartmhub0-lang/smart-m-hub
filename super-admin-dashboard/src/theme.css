@@ -1,0 +1,40 @@
+.super-admin-shell[data-theme="light"] {
+  color-scheme: light;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.super-admin-shell[data-theme="light"] [style*="#070b14"],
+.super-admin-shell[data-theme="light"] [style*="#0b1220"],
+.super-admin-shell[data-theme="light"] [style*="#0f172a"] {
+  background-color: #ffffff !important;
+}
+
+.super-admin-shell[data-theme="light"] [style*="#101827"],
+.super-admin-shell[data-theme="light"] [style*="#172033"] {
+  background-color: #f1f5f9 !important;
+}
+
+.super-admin-shell[data-theme="light"] [style*="#f8fafc"],
+.super-admin-shell[data-theme="light"] [style*="#e5edf8"],
+.super-admin-shell[data-theme="light"] [style*="#dbe7f3"],
+.super-admin-shell[data-theme="light"] [style*="#dbeafe"],
+.super-admin-shell[data-theme="light"] [style*="#cbd5e1"],
+.super-admin-shell[data-theme="light"] [style*="#9fb0c7"],
+.super-admin-shell[data-theme="light"] [style*="#94a3b8"] {
+  color: #334155 !important;
+}
+
+.super-admin-shell[data-theme="light"] [style*="#1f2a3d"],
+.super-admin-shell[data-theme="light"] [style*="#233047"],
+.super-admin-shell[data-theme="light"] [style*="#334155"] {
+  border-color: #cbd5e1 !important;
+}
+
+.super-admin-shell[data-theme="light"] input,
+.super-admin-shell[data-theme="light"] textarea,
+.super-admin-shell[data-theme="light"] select {
+  color-scheme: light;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}

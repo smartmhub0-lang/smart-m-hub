@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../auth/superAdminAuth";
 
-export default function Topbar() {
+export default function Topbar({ lightMode, onToggleTheme }) {
   const navigate = useNavigate();
   const user = getCurrentUser();
 
@@ -19,6 +19,9 @@ export default function Topbar() {
 
       <div style={rightStyle}>
         <span style={pillStyle}>{user?.email || "Super Admin"}</span>
+        <button style={buttonStyle} onClick={onToggleTheme} aria-label={lightMode ? "Switch to dark mode" : "Switch to light mode"}>
+          {lightMode ? "Dark mode" : "Light mode"}
+        </button>
         <button style={buttonStyle} onClick={signOut}>Logout</button>
       </div>
     </div>

@@ -1687,7 +1687,10 @@ async def upload_file(
             "size": len(payload),
             "sha256": file_asset["sha256"],
         },
-        message="File uploaded successfully"
+        message="File uploaded successfully",
+        # Expose the URL at the top level as well as inside `data` for simple
+        # upload clients while retaining the standard API response envelope.
+        url=url,
     )
 
 

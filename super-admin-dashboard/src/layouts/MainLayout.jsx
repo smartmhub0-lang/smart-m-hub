@@ -1,10 +1,18 @@
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 
 export default function MainLayout() {
+  const [lightMode, setLightMode] = useState(() => localStorage.getItem("smart_m_hub_super_admin_theme") === "light");
+  useEffect(() => {
+    localStorage.setItem("smart_m_hub_super_admin_theme", lightMode ? "light" : "dark");
+  }, [lightMode]);
+
   return (
     <div
+      data-theme={lightMode ? "light" : "dark"}
+      className="super-admin-shell"
       style={{
         display: "flex",
         minHeight: "100vh",
@@ -21,7 +29,7 @@ export default function MainLayout() {
           flexDirection: "column",
         }}
       >
-        <Topbar />
+        <Topbar lightMode={lightMode} onToggleTheme={() => setLightMode((mode) => !mode)} />
 
         <div
           style={{

@@ -11,5 +11,7 @@ export async function uploadManagedFile(file, category) {
   // omits the boundary and causes FastAPI to reject the form body.
   const response = await apiClient.post("/uploads", formData);
 
-  return response?.data?.url || "";
+  // api_success wraps the payload under `data`; tolerate the flat shape too
+  // for deployments that may still return it directly.
+  return response?.data?.data?.url || response?.data?.url || "";
 }
