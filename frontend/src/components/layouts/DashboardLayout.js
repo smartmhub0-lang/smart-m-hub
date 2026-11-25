@@ -30,6 +30,8 @@ import {
   LifeBuoy,
   ClipboardCheck,
   Download,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 // =========================
@@ -178,6 +180,11 @@ const DashboardLayout = () => {
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(() => localStorage.getItem("smart_m_hub_theme") === "light");
+
+  useEffect(() => {
+    localStorage.setItem("smart_m_hub_theme", lightMode ? "light" : "dark");
+  }, [lightMode]);
 
   const rawUser = authService.getUser();
 
@@ -271,13 +278,14 @@ const DashboardLayout = () => {
 
   return (
     <div
-      className="flex h-screen text-slate-200 overflow-hidden"
-      style={{ backgroundColor: secondaryColor }}
+      data-theme={lightMode ? "light" : "dark"}
+      className={`app-shell flex h-screen overflow-hidden ${lightMode ? "app-theme-light" : "text-slate-200"}`}
+      style={{ backgroundColor: lightMode ? "#f8fafc" : secondaryColor, color: lightMode ? "#0f172a" : undefined }}
     >
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0F172A] border-r border-white/5 transition-transform duration-300 flex flex-col ${
+        className={`app-sidebar fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0F172A] border-r border-white/5 transition-transform duration-300 flex flex-col ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -393,6 +401,9 @@ const DashboardLayout = () => {
           <div className="text-xs uppercase" style={{ color: primaryColor }}>
             {role.replace("_", " ")}
           </div>
+          <Button variant="ghost" size="icon" onClick={() => setLightMode((value) => !value)} aria-label={lightMode ? "Switch to dark mode" : "Switch to light mode"} title={lightMode ? "Switch to dark mode" : "Switch to light mode"}>
+            {lightMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </Button>
         </header>
 
         {(branding?.mission || branding?.vision) && (

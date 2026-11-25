@@ -176,6 +176,7 @@ apiClient.interceptors.request.use((config) => {
   }
 
   if (config.data instanceof FormData) {
+    config.headers.delete?.("Content-Type");
     delete config.headers["Content-Type"];
   } else {
     config.headers["Content-Type"] = "application/json";

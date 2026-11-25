@@ -7,9 +7,9 @@ export async function uploadManagedFile(file, category) {
   formData.append("file", file);
   formData.append("category", category);
 
-  const response = await apiClient.post("/uploads", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  // Let Axios/browser add the multipart boundary. Setting this header by hand
+  // omits the boundary and causes FastAPI to reject the form body.
+  const response = await apiClient.post("/uploads", formData);
 
   return response?.data?.url || "";
 }
